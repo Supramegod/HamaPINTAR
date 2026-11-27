@@ -10,11 +10,16 @@ return new class extends Migration
     {
         Schema::create('detection_logs', function (Blueprint $table) {
             $table->id();
-            $table->string('node_name');        // Menyimpan nama Node (PIR 1 - PIR 5)
-            $table->dateTime('detected_at');    // Waktu deteksi dari alat
-            $table->decimal('latitude', 10, 8); // Koordinat GPS Lintang
-            $table->decimal('longitude', 11, 8); // Koordinat GPS Bujur
+            $table->string('node_name', 50);     // Nama node sensor (PIR 1 - PIR 5)
+            $table->dateTime('detected_at');     // Waktu deteksi dari alat
+            $table->decimal('latitude', 10, 8);  // Koordinat GPS lintang
+            $table->decimal('longitude', 11, 8); // Koordinat GPS bujur
             $table->timestamps();
+
+            // Satu node tidak mungkin mencatat dua deteksi di detik yang sama:
+            // dipakai untuk menolak data duplikat saat import CSV.
+            $table->unique(['node_name', 'detected_at']);
+            $table->index('detected_at');
         });
     }
 

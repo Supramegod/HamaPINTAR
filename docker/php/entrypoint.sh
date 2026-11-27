@@ -6,11 +6,13 @@ cd /var/www/html
 [ -d vendor ] || composer install --no-interaction --prefer-dist
 grep -q '^APP_KEY=base64' .env || php artisan key:generate --force
 
-echo "Menunggu MySQL di ${DB_HOST}:${DB_PORT}..."
-until php -r "new PDO('mysql:host=' . getenv('DB_HOST') . ';port=' . getenv('DB_PORT'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'));" 2>/dev/null; do
+# Tunggu MySQL siap lalu jalankan migrasi (koneksi dibaca dari .env)
+attempt=0
+until php artisan migrate --force --no-interaction; do
+    attempt=$((attempt + 1))
+    [ "$attempt" -ge 30 ] && echo "Database tidak dapat dihubungi." && exit 1
+    echo "Menunggu database... ($attempt)"
     sleep 2
 done
-
-php artisan migrate --force
 
 exec "$@"

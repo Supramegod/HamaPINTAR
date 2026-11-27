@@ -12,15 +12,10 @@ services:
       pull: false
     image: deteksitikus-app:local
     pull_policy: never
+    # Konfigurasi DB dibaca dari .env (bukan environment container) supaya
+    # phpunit.xml tetap bisa memaksa SQLite in-memory saat test.
     volumes:
       - ./:/var/www/html
-    environment:
-      DB_CONNECTION: mysql
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-deteksitikus}
-      DB_USERNAME: ${DB_USERNAME:-deteksitikus}
-      DB_PASSWORD: ${DB_PASSWORD:-secret}
     depends_on:
       db:
         condition: service_healthy
