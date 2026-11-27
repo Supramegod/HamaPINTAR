@@ -1,0 +1,80 @@
+name: deteksitikus
+
+# Semua image memakai yang sudah ada di lokal (pull_policy: never)
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+      pull: false
+    image: deteksitikus-app:local
+    pull_policy: never
+    volumes:
+      - ./:/var/www/html
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-deteksitikus}
+      DB_USERNAME: ${DB_USERNAME:-deteksitikus}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: nginx:alpine
+    pull_policy: never
+    ports:
+      - "${APP_PORT:-8081}:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8
+    pull_policy: never
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-deteksitikus}
+      MYSQL_USER: ${DB_USERNAME:-deteksitikus}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      TZ: Asia/Jakarta
+    ports:
+      - "${FORWARD_DB_PORT:-33061}:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  vite:
+    image: node:22-alpine
+    pull_policy: never
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /app
+    command: sh -c "[ -d node_modules ] || npm install; npm run dev"
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+    volumes:
+      - ./:/app
+
+  adminer:
+    image: adminer:5
+    pull_policy: never
+    ports:
+      - "${ADMINER_PORT:-8082}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+
+volumes:
+  dbdata:
